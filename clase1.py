@@ -5,13 +5,12 @@ import random
 import math
 
 class AbstractNeuron:
-    def __init__(self, w, b, lr=0, precision = 0, nlayer = 0):
+    def __init__(self, w, b, lr=0.1, precision = 0):
         self.weight = w # Vector of weights
         self.bias = b   # Bias
         self.lr = lr # Learning rate
         self.precision = precision
-        self.nlayer = nlayer
-
+        ## Clase 22/10 Learning rate = 0.5
     def train(self, point, expected):
         real = self.feed(point) # Perceptron's output according to w and b
         if (expected != real):
@@ -99,16 +98,47 @@ class Sigmoid(AbstractNeuron):
     def feed(self, x):
         result = 1 / (1 + math.exp(-1 * np.dot(self.weight, x) - self.bias))
         return result
-class NeuralNetwork():
-class NeuronLayer():
-    def feed(self, x):
-        array = []
-        for y in x:
-            array.append(y.feed(x))
-        if (self.nlayer == self.getnlayer):
-            
 
-class Neuron():
+class NeuronLayer():
+    def __init__(self, nneurons=1, isoutput=True, ninput=0, noutput=0):
+        self.isoutput = isoutput
+        self.nneurons = nneurons
+        self.neuronarray = createNeurons(nneurons, ninput, noutput)
+    def feed (self, input):
+        return
+    def createNeurons(self, ninput, noutput):
+        res = []
+        while (ninput > 0):
+            p = Perceptron(np.random.rand(ninput)*2, random.randint(-2,2), 0.1)
+            res.append(p)
+            ninput--
+        return res
+
+class NeuralNetwork():
+    def __init__(self, nlayers=1, neuronsarray=[1], ninput=1, noutput=1):
+        self.nlayers = nlayers
+        self.neuronarray = createLayers(nlayers, neuronsarray, ninput, noutput)
+    def createLayers(self, nlayers, narray, ninput, noutput):
+        res = []
+        ## Este caso no estoy seguro
+        if (nlayers==1):
+            return res.append(NeuralLayer(narray[0], True, ninput, noutput))
+        for i in range(0, nlayers):
+            # Input Layer
+            if (i == 0):
+                l = NeuralLayer(narray[i], False, ninput, narray[i+1])
+            # Output Layer
+            if (i == nlayers):
+                l = NeuralLayer(narray[i], True, narray[i-1], noutput)
+            # Internal Layer
+            else:
+                l = NeuralLayer(narray[i], False, narray[i-1], narray[i+1])
+            res.append(l)
+            i++
+        return res
+    def feed (self, input):
+        #feed(input,neuronarray):
+        return
 
 
 class AndPerceptron(Perceptron):
@@ -130,15 +160,19 @@ class SumPerceptron(Perceptron):
         ressum = self.nand.feed(np.array([res2, res3]))
         rescarry = self.nand.feed(np.array([res1,res1]))
         return np.array([rescarry,ressum])
+
 class TrainPerceptron(Perceptron):
     def __init__(self):
         Perceptron.__init__(self, np.array([random.randint(-2,2),random.randint(-2,2)]), random.randint(-2,2),0.1)
 class TrainSigmoid(Perceptron):
     def __init__(self):
         Sigmoid.__init__(self, np.array([random.randint(-2,2),random.randint(-2,2)]), random.randint(-2,2),0.1)
+class TrainNeuralNetwork(Perceptron):
+    def __init__(self):
+        NeuralNetwork.__init__(self, 2, [2,1], 2, 1)
 
 def main():
-    choice = input('Seleccione operacion (AND=1, OR=2, NAND=3, SUM=4, TRAINPERCEPTRON=5, TRAINSIGMOID=6, PRECISIONPERCEPTRON=7, PRECISIONTRAINSIGMOID=8):')
+    choice = input('Seleccione operacion (AND=1, OR=2, NAND=3, SUM=4, TRAINPERCEPTRON=5, TRAINSIGMOID=6, PRECISIONPERCEPTRON=7, PRECISIONTRAINSIGMOID=8, NEURALNETWORK=9):')
     choice = int(choice)
     if (choice == 1):
         p = AndPerceptron()
@@ -160,10 +194,9 @@ def main():
     if (choice == 8):
         p = TrainSigmoid()
         p.plotlearning()
-    #x1 = input('Ingrese x1: ')
-    #x2 = input('Ingrese x2: ')
-    #result = p.feed(np.array([int(x1),int(x2)]))
-    #print(result)
+    if (choice == 9):
+        p = TrainNeuralNetwork()
+        p.plotlearning()
 
 if __name__ == "__main__":
     main()
