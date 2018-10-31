@@ -94,52 +94,94 @@ class Perceptron(AbstractNeuron):
             return 0
         else:
             return 1
+
 class Sigmoid(AbstractNeuron):
     def feed(self, x):
         result = 1 / (1 + math.exp(-1 * np.dot(self.weight, x) - self.bias))
         return result
 
 class NeuronLayer():
-    def __init__(self, nneurons=1, isoutput=True, ninput=0, noutput=0):
+    def __init__(self, nneurons=1, isoutput=True, ninput=0):
         self.isoutput = isoutput
         self.nneurons = nneurons
-        self.neuronarray = createNeurons(nneurons, ninput, noutput)
-    def feed (self, input):
-        return
-    def createNeurons(self, ninput, noutput):
+        self.neuronarray = []
+    def createNeurons(self, nneurons, ninput):
         res = []
-        while (ninput > 0):
+        while (nneurons > 0):
             p = Perceptron(np.random.rand(ninput)*2, random.randint(-2,2), 0.1)
             res.append(p)
-            ninput--
+            nneurons = nneurons - 1
         return res
 
+    def feed (self, input):
+        output = []
+        for n in self.neuronarray:
+            output.append(n.feed(input))
+        return output
+
 class NeuralNetwork():
-    def __init__(self, nlayers=1, neuronsarray=[1], ninput=1, noutput=1):
+    def __init__(self, nlayers=1, neuronsarray=[1], ninput=1):
         self.nlayers = nlayers
-        self.neuronarray = createLayers(nlayers, neuronsarray, ninput, noutput)
-    def createLayers(self, nlayers, narray, ninput, noutput):
+        self.narray = neuronsarray
+        self.ninput = ninput
+        self.layerarray = []
+    def createLayers(self, nlayers, narray, ninput):
         res = []
         ## Este caso no estoy seguro
         if (nlayers==1):
-            return res.append(NeuralLayer(narray[0], True, ninput, noutput))
+            return res.append(NeuralLayer(narray[0], True, ninput))
         for i in range(0, nlayers):
             # Input Layer
             if (i == 0):
-                l = NeuralLayer(narray[i], False, ninput, narray[i+1])
+                l = NeuralLayer(narray[i], False, ninput)
             # Output Layer
-            if (i == nlayers):
-                l = NeuralLayer(narray[i], True, narray[i-1], noutput)
+            elif (i == nlayers-1):
+                l = NeuralLayer(narray[i], True, narray[i-1])
             # Internal Layer
             else:
-                l = NeuralLayer(narray[i], False, narray[i-1], narray[i+1])
+                l = NeuralLayer(narray[i], False, narray[i-1])
             res.append(l)
-            i++
-        return res
-    def feed (self, input):
-        #feed(input,neuronarray):
-        return
-
+            i = i + 1
+        self.layerarray = res
+    def feed(self, input):
+        output = input
+        for l in self.layerarray:
+            output = l.feed(output)
+        return output
+    def plotpoints(self):
+        epoch = input('Ingrese la cantidad de épocas: ')
+        epoch = int(epoch)
+        trainingpoints = np.array([[0,0],[0,1],[1,0],[1,1]])
+        while epoch > 0:
+            for t in trainingpoints:
+                if t[0] == t[1]: # XOR
+                    self.train(t,0)
+                else:
+                    self.train(t,1)
+            epoch = epoch - 1
+        ## Clasificacion de los puntos reales
+        newpoints = np.array([[0,0],[0,1],[1,0],[1,1]])
+        listclassification = []
+        for n in newpoints:
+            if n[0] < n[1]: # Recta y = x
+                listclassification.append(0)
+            else:
+                listclassification.append(1)
+        output = []
+        for po in range(0,len(newpoints)):
+            classification = self.feed(newpoints[po])
+            output.append(classification)
+            if classification:
+                plt.scatter(newpoints[po][0],newpoints[po][1],c='red')
+            else:
+                plt.scatter(newpoints[po][0],newpoints[po][1],c='blue')
+        plt.plot([0,1], [0,1],c='black')
+        aciertos = 0
+        for l,o in zip(listclassification,output):
+            aciertos += 1 if (l == o) else 0
+        precision = aciertos / len(output)
+        print(precision)
+        plt.show()
 
 class AndPerceptron(Perceptron):
     def __init__(self):
@@ -163,13 +205,10 @@ class SumPerceptron(Perceptron):
 
 class TrainPerceptron(Perceptron):
     def __init__(self):
-        Perceptron.__init__(self, np.array([random.randint(-2,2),random.randint(-2,2)]), random.randint(-2,2),0.1)
+        Perceptron.__init__(self, np.array([random.randint(-2,2),random.randint(-2,2)]),random.randint(-2,2),0.1)
 class TrainSigmoid(Perceptron):
     def __init__(self):
         Sigmoid.__init__(self, np.array([random.randint(-2,2),random.randint(-2,2)]), random.randint(-2,2),0.1)
-class TrainNeuralNetwork(Perceptron):
-    def __init__(self):
-        NeuralNetwork.__init__(self, 2, [2,1], 2, 1)
 
 def main():
     choice = input('Seleccione operacion (AND=1, OR=2, NAND=3, SUM=4, TRAINPERCEPTRON=5, TRAINSIGMOID=6, PRECISIONPERCEPTRON=7, PRECISIONTRAINSIGMOID=8, NEURALNETWORK=9):')
@@ -195,8 +234,9 @@ def main():
         p = TrainSigmoid()
         p.plotlearning()
     if (choice == 9):
-        p = TrainNeuralNetwork()
-        p.plotlearning()
+        nn = NeuralNetwork(2, [2,1], 2)
+        nn.createLayers(nn.nlayers, nn.narray, nn.ninput)
+        nn.plotpoints()
 
 if __name__ == "__main__":
     main()
