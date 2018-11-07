@@ -4,7 +4,8 @@ import matplotlib.pyplot as plt
 import random
 import math
 
-class AbstractNeuron:
+class ArtificialNeuron:
+
     def __init__(self, w, b, lr=0.1, precision = 0):
         self.weight = w # Vector of weights
         self.bias = b   # Bias
@@ -19,14 +20,12 @@ class AbstractNeuron:
             self.weight = newweight
             newbias = self.bias + (self.lr * diff)
             self.bias = newbias
-    def plotpoints(self):
-        tpoints = input('Ingrese la cantidad de puntos para entrenar: ')
-        tpoints = int(tpoints)
-        npoints = input('Ingrese la cantidad de puntos a graficar: ')
-        npoints = int(npoints)
+
+    def plotpoints(self, tpoints, npoints):
         trainingpoints = np.random.rand(tpoints,2)
         for t in trainingpoints:
-            if t[0] < t[1]: # Recta y = x
+            # Recta y = x
+            if t[0] < t[1]:
                 self.train(t,0)
             else:
                 self.train(t,1)
@@ -41,25 +40,20 @@ class AbstractNeuron:
         output = []
         for po in range(0,len(newpoints)):
             classification = self.feed(newpoints[po])
+            classification = classification > 0.5 # Treshold para el Sigmoid (Perceptron queda igual)
             output.append(classification)
             if classification:
                 plt.scatter(newpoints[po][0],newpoints[po][1],c='red')
             else:
                 plt.scatter(newpoints[po][0],newpoints[po][1],c='blue')
         plt.plot([0,1], [0,1],c='black')
-        aciertos = 0
-        for l,o in zip(listclassification,output):
-            aciertos += 1 if (l == o) else 0
-        precision = aciertos / len(output)
-        print(precision)
         plt.show()
-    def plotlearning(self):
+
+    def plotlearning(self, npoints, ntrain):
         p = []
-        npoints = input('Ingrese la cantidad de puntos a graficar: ')
-        npoints = int(npoints)
-        for i in range (0,500):
+        for i in range (0,ntrain):
             p.append(self.precisionlearning(i,npoints))
-        plt.plot(range(0,500),p)
+        plt.plot(range(0,ntrain),p)
         plt.show()
 
     def precisionlearning(self, tpoints, npoints):
@@ -80,6 +74,7 @@ class AbstractNeuron:
         output = []
         for po in range(0,len(newpoints)):
             classification = self.feed(newpoints[po])
+            classification = classification > 0.5 # Treshold para el Sigmoid (Perceptron queda igual)   
             output.append(classification)
         aciertos = 0
         for l,o in zip(listclassification,output):
@@ -87,7 +82,7 @@ class AbstractNeuron:
         precision = aciertos / len(output)
         return precision
 
-class Perceptron(AbstractNeuron):
+class Perceptron(ArtificialNeuron):
     def feed(self, x):
         result = np.dot(self.weight, x) + self.bias
         if (result <= 0):
@@ -95,10 +90,21 @@ class Perceptron(AbstractNeuron):
         else:
             return 1
 
-class Sigmoid(AbstractNeuron):
+class Sigmoid(ArtificialNeuron):
     def feed(self, x):
         result = 1 / (1 + math.exp(-1 * np.dot(self.weight, x) - self.bias))
         return result
+
+class SumPerceptron(ArtificialNeuron):
+    def __init__(self):
+        self.nand = Perceptron(np.array([-2 ,-2]), 3) # Nand Perceptron
+    def feed(self, x):
+        res1 = self.nand.feed(x)
+        res2 = self.nand.feed(np.array([x[0], res1]))
+        res3 = self.nand.feed(np.array([x[1], res1]))
+        ressum = self.nand.feed(np.array([res2, res3]))
+        rescarry = self.nand.feed(np.array([res1,res1]))
+        return np.array([rescarry,ressum])
 
 class NeuronLayer():
     def __init__(self, nneurons=1, isoutput=True, ninput=0):
@@ -182,33 +188,6 @@ class NeuralNetwork():
         precision = aciertos / len(output)
         print(precision)
         plt.show()
-
-class AndPerceptron(Perceptron):
-    def __init__(self):
-        Perceptron.__init__(self, np.array([1,0]), -0.5)
-class OrPerceptron(Perceptron):
-    def __init__(self):
-        Perceptron.__init__(self, np.array([1,1]), -1.5)
-class NandPerceptron(Perceptron):
-    def __init__(self):
-        Perceptron.__init__(self, np.array([-2,-2]), 3)
-class SumPerceptron(Perceptron):
-    def __init__(self):
-        self.nand = NandPerceptron()
-    def feed(self, x):
-        res1 = self.nand.feed(x)
-        res2 = self.nand.feed(np.array([x[0], res1]))
-        res3 = self.nand.feed(np.array([x[1], res1]))
-        ressum = self.nand.feed(np.array([res2, res3]))
-        rescarry = self.nand.feed(np.array([res1,res1]))
-        return np.array([rescarry,ressum])
-
-class TrainPerceptron(Perceptron):
-    def __init__(self):
-        Perceptron.__init__(self, np.array([random.randint(-2,2),random.randint(-2,2)]),random.randint(-2,2),0.1)
-class TrainSigmoid(Perceptron):
-    def __init__(self):
-        Sigmoid.__init__(self, np.array([random.randint(-2,2),random.randint(-2,2)]), random.randint(-2,2),0.1)
 
 def main():
     choice = input('Seleccione operacion (AND=1, OR=2, NAND=3, SUM=4, TRAINPERCEPTRON=5, TRAINSIGMOID=6, PRECISIONPERCEPTRON=7, PRECISIONTRAINSIGMOID=8, NEURALNETWORK=9):')
