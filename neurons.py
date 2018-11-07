@@ -14,7 +14,7 @@ class ArtificialNeuron:
         self.delta = delta
         ## Clase 22/10 Learning rate = 0.5
     def train(self, point, expected):
-        real = self.feed(point) # Perceptron's output according to w and b
+        real = self.feed(point) # Output according to w and b
         if (expected != real):
             diff = expected - real
             newweight = self.weight + (self.lr * point * diff) # Este se puede repetir en todos los input en vez de realizarlo solo una vez)
@@ -87,10 +87,11 @@ class Perceptron(ArtificialNeuron):
     def feed(self, x):
         result = np.dot(self.weight, x) + self.bias
         self.output = result
-        if (result <= 0):
-            return 0
-        else:
-            return 1
+	return result
+        #if (result <= 0):
+        #    return 0
+        #else:
+        #    return 1
 
 class Sigmoid(ArtificialNeuron):
     def feed(self, x):
@@ -151,17 +152,26 @@ class NeuralNetwork():
         delta = error * output[0] * (1 - output[0])
         # TODO: Asumo que es una neurona de salida por ahora
         self.layerarray[len(self.layerarray)-1].neuronarray[0].delta = delta
-        for j in reversed(range(0,len(self.layerarray)-2):
-            error = 0
-            for n in self.layerarray[j+1].neuronarray:
-                error = error + np.dot(n.weight,n.delta)
-            for m in self.layerarray[j].neuronarray:
-                m.delta = error * m.output * (1 - m.output)
+ 		self.backwardPropagation(self)
         self.updateWeigths(input)
         return error
-
+	def backwardPropagation(self):
+		for j in reversed(range(0,len(self.layerarray)-2):
+			# Neuronas en capa J (de mas externa a interna)
+            for n in range(0, len(self.layerarray[j].neuronarray)):
+	            error = 0
+	            for m in self.layerarray[j+1].neuronarray:
+        	        error = error + m.weight[n] * m.delta
+        	    self.layerarray[j].neuronarray[n].delta = error * self.layerarray[j].neuronarray[n].output * (1 - self.layerarray[j].neuronarray[n].output)
     def updateWeigths(self, input):
-        return
+		output = input
+		for j in self.layerarray:
+			for i in range(0,len(j.neuronarray)):
+				for k in range(0,len(j.neuronarray[i].w)):
+					j.neuronarray[i].w[k] = j.neuronarray[i].w[k] + (j.neuronarray[i].lr * j.neuronarray[i].delta * output[k])
+					j.neuronarray[i].bias = j.neuronarray[i].bias + (j.neuronarray[i].lr * j.neuronarray[i].delta) 
+			
+				
 
     def setwb(self, layer, neuron, w, b):
         self.layerarray[layer].neuronarray[neuron].weight = w
