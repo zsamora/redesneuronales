@@ -1,5 +1,5 @@
 import unittest
-from clase1 import *
+from neurons import *
 
 class UnitTestClass(unittest.TestCase):
     def test_andPerceptron(self):
@@ -26,9 +26,18 @@ class UnitTestClass(unittest.TestCase):
         self.assertTrue(np.array_equal(sumPerceptron.feed(np.array([0,1])),np.array([0,1])))
         self.assertTrue(np.array_equal(sumPerceptron.feed(np.array([1,0])),np.array([0,1])))
         self.assertTrue(np.array_equal(sumPerceptron.feed(np.array([1,1])),np.array([1,0])))
+    def test_xorNeuralNetwork(self):
+        xorNeuralNetwork = NeuralNetwork(2, [2,1], 2)
+        xorNeuralNetwork.setwb(0,1,1,1)
+        self.assertFalse(xorNeuralNetwork.feed(np.array([0,0])))
+        self.assertTrue(xorNeuralNetwork.feed(np.array([0,1])))
+        self.assertTrue(xorNeuralNetwork.feed(np.array([1,0])))
+        self.assertFalse(xorNeuralNetwork.feed(np.array([1,1])))
+    def test_ex1NeuralNetwork(self):
+        ex1NeuralNetwork = NeuralNetwork(2, [1,1], 2)
 
 if __name__ == '__main__':
-    p = Perceptron(np.array([random.randint(-2,2),random.randint(-2,2)]),random.randint(-2,2), 0.1)
+    """p = Perceptron(np.array([random.randint(-2,2),random.randint(-2,2)]),random.randint(-2,2), 0.1)
     print("Test para clasificación de recta y = x con Perceptron \n(Recuerde cerrar el gráfico para continuar el testing)")
     tpoints = input('Ingrese la cantidad de puntos para entrenar: ')
     tpoints = int(tpoints)
@@ -55,5 +64,5 @@ if __name__ == '__main__':
     npoints = int(npoints)
     ntrain = input('Ingrese el número de entrenamientos: ')
     ntrain = int(ntrain)
-    news.plotlearning(npoints, ntrain)
+    news.plotlearning(npoints, ntrain)"""
     unittest.main()
