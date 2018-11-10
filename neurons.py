@@ -8,19 +8,17 @@ class ArtificialNeuron:
     def __init__(self, w, b, lr=0.1, precision = 0, output = 0, delta = 0):
         self.weight = w # Vector of weights
         self.bias = b   # Bias
-        self.lr = lr # Learning rate
+        self.lr = lr    # Learning rate
         self.precision = precision
         self.output = output
         self.delta = delta
-        ## Clase 22/10 Learning rate = 0.5
+
     def train(self, point, expected):
-        real = self.feed(point) # Output according to w and b
+        real = self.feed(point)
         if (expected != real):
             diff = expected - real
-            newweight = self.weight + (self.lr * point * diff) # Este se puede repetir en todos los input en vez de realizarlo solo una vez)
-            self.weight = newweight
-            newbias = self.bias + (self.lr * diff)
-            self.bias = newbias
+            self.weight = self.weight + (self.lr * point * diff)
+            self.bias = self.bias + (self.lr * diff)
 
     def plotpoints(self, tpoints, npoints):
         trainingpoints = np.random.rand(tpoints,2)
@@ -86,16 +84,15 @@ class ArtificialNeuron:
 class Perceptron(ArtificialNeuron):
     def feed(self, x):
         result = np.dot(self.weight, x) + self.bias
-        self.output = result
-	return result
-        #if (result <= 0):
-        #    return 0
-        #else:
-        #    return 1
+        if (result <= 0):
+            return 0
+        else:
+            return 1
 
 class Sigmoid(ArtificialNeuron):
     def feed(self, x):
-        result = 1 / (1 + math.exp(-1 * np.dot(self.weight, x) - self.bias))
+        #print("input:",x,"weight:",self.weight)
+        result = 1.0 / (1.0 + math.exp(-1.0 * (np.dot(self.weight, x) + self.bias)))
         self.output = result
         return result
 
@@ -111,11 +108,14 @@ class SumPerceptron(ArtificialNeuron):
         return np.array([rescarry,ressum])
 
 class NeuronLayer():
-    def __init__(self, nneurons=1, isoutput=True, ninput=0):
+    def __init__(self, type=1, nneurons=1, isoutput=True, ninput=0, lr=0.5):
         self.isoutput = isoutput
         self.neuronarray = []
         while (nneurons > 0):
-            n = Sigmoid(np.random.rand(ninput)*2, random.randint(-2,2), 0.1)
+            if type:
+                n = Sigmoid(np.random.rand(ninput)*2, random.randint(-2,2), lr)
+            else:
+                n = Perceptron(np.random.rand(ninput)*2, random.randint(-2,2), lr)
             self.neuronarray.append(n)
             nneurons = nneurons - 1
 
@@ -126,18 +126,19 @@ class NeuronLayer():
         return output
 
 class NeuralNetwork():
-    def __init__(self, nlayers=1, narray=[1], ninput=1):
+    def __init__(self, type, nlayers=1, narray=[1], ninput=1, lr=0.5, error=0):
         self.layerarray = []
+        # Solo una capa de neuronas
         if (nlayers==1):
-            self.layerarray.append(NeuronLayer(narray[0], True, ninput))
+            self.layerarray.append(NeuronLayer(type, narray[0], True, ninput, lr))
         else:
             for i in range(0, nlayers):
                 if (i == 0): # Input Layer
-                    l = NeuronLayer(narray[i], False, ninput)
+                    l = NeuronLayer(type, narray[i], False, ninput, lr)
                 elif (i == nlayers-1): # Output Layer
-                    l = NeuronLayer(narray[i], True, narray[i-1])
+                    l = NeuronLayer(type, narray[i], True, narray[i-1], lr)
                 else: # Internal Layer
-                    l = NeuronLayer(narray[i], False, narray[i-1])
+                    l = NeuronLayer(type, narray[i], False, narray[i-1], lr)
                 self.layerarray.append(l)
 
     def feed(self, input):
@@ -146,68 +147,69 @@ class NeuralNetwork():
             output = l.feed(output)
         return output
 
-    def train(self, input, expected):
-        output = self.feed(input) # Final output
-        error = expected - output[0]
-        delta = error * output[0] * (1 - output[0])
-        # TODO: Asumo que es una neurona de salida por ahora
-        self.layerarray[len(self.layerarray)-1].neuronarray[0].delta = delta
- 		self.backwardPropagation(self)
-        self.updateWeigths(input)
-        return error
-	def backwardPropagation(self):
-		for j in reversed(range(0,len(self.layerarray)-2):
-			# Neuronas en capa J (de mas externa a interna)
+    def train(self, input, expected, epochs):
+        while (epochs > 0):
+            for i in range(0,len(input)):
+                output = np.array(self.feed(input[i]))
+                error = expected[i] - output
+                delta = error * output * (1 - output)
+                for j in range(len(self.layerarray[-1].neuronarray)):
+                    self.layerarray[-1].neuronarray[j].delta = delta[j]
+                self.backwardPropagation()
+                self.updateWeigths(input[i])
+            epochs = epochs - 1
+
+    def backwardPropagation(self):
+        for j in reversed(range(0,len(self.layerarray)-1)):
+            # Neuronas en capa J (de mas externa a interna) de las hidden layers
             for n in range(0, len(self.layerarray[j].neuronarray)):
-	            error = 0
-	            for m in self.layerarray[j+1].neuronarray:
-        	        error = error + m.weight[n] * m.delta
-        	    self.layerarray[j].neuronarray[n].delta = error * self.layerarray[j].neuronarray[n].output * (1 - self.layerarray[j].neuronarray[n].output)
+                error = 0
+                for m in self.layerarray[j+1].neuronarray:
+                    error = error + m.weight[n] * m.delta
+                self.layerarray[j].neuronarray[n].error = error
+                self.layerarray[j].neuronarray[n].delta = error * self.layerarray[j].neuronarray[n].output * (1 - self.layerarray[j].neuronarray[n].output)
+
     def updateWeigths(self, input):
-		output = input
-		for j in self.layerarray:
-			for i in range(0,len(j.neuronarray)):
-				for k in range(0,len(j.neuronarray[i].w)):
-					j.neuronarray[i].w[k] = j.neuronarray[i].w[k] + (j.neuronarray[i].lr * j.neuronarray[i].delta * output[k])
-					j.neuronarray[i].bias = j.neuronarray[i].bias + (j.neuronarray[i].lr * j.neuronarray[i].delta) 
-			
-				
+        output = input
+        for l in self.layerarray:
+            outputnew = []
+            for i in range(0,len(l.neuronarray)):
+                for k in range(0,len(l.neuronarray[i].weight)):
+                    l.neuronarray[i].weight[k] = l.neuronarray[i].weight[k] + (l.neuronarray[i].lr * l.neuronarray[i].delta * output[k])
+                l.neuronarray[i].bias = l.neuronarray[i].bias + (l.neuronarray[i].lr * l.neuronarray[i].delta)
+                outputnew.append(l.neuronarray[i].output)
+            output = outputnew
 
     def setwb(self, layer, neuron, w, b):
         self.layerarray[layer].neuronarray[neuron].weight = w
         self.layerarray[layer].neuronarray[neuron].bias = b
 
-    def plotpoints(self):
-        epoch = input('Ingrese la cantidad de épocas: ')
-        epoch = int(epoch)
-        trainingpoints = np.array([[0,0],[0,1],[1,0],[1,1]])
-        while epoch > 0:
-            for t in trainingpoints:
-                if t[0] == t[1]: # XOR
-                    self.train(t,0)
-                else:
-                    self.train(t,1)
-            epoch = epoch - 1
-        ## Clasificacion de los puntos reales
-        newpoints = np.array([[0,0],[0,1],[1,0],[1,1]])
-        listclassification = []
-        for n in newpoints:
-            if n[0] < n[1]: # Recta y = x
-                listclassification.append(0)
-            else:
-                listclassification.append(1)
-        output = []
-        for po in range(0,len(newpoints)):
-            classification = self.feed(newpoints[po])
-            output.append(classification)
-            if classification:
-                plt.scatter(newpoints[po][0],newpoints[po][1],c='red')
-            else:
-                plt.scatter(newpoints[po][0],newpoints[po][1],c='blue')
-        plt.plot([0,1], [0,1],c='black')
-        aciertos = 0
-        for l,o in zip(listclassification,output):
-            aciertos += 1 if (l == o) else 0
-        precision = aciertos / len(output)
-        print(precision)
+    def getwb(self, layer, neuron):
+        return [self.layerarray[layer].neuronarray[neuron].weight, self.layerarray[layer].neuronarray[neuron].bias]
+
+    def getlr(self, layer, neuron):
+        return self.layerarray[layer].neuronarray[neuron].lr
+
+    def checkw(self, w):
+        for l in self.layerarray:
+            for n in l.neuronarray:
+                for p in range(len(n.weight)):
+                    while (abs(n.weight[p]) < w):
+                        n.weight[p] = random.randint(-2,2)
+
+    def plottrain(self, input, expected, epochs):
+        e = []
+        for i in range (0, epochs):
+            errorsq = 0
+            for i in range(0,len(input)):
+                output = np.array(self.feed(input[i]))
+                error = expected[i] - output
+                errorsq = errorsq + sum(map(lambda x:x*x,error))
+                delta = error * output * (1 - output)
+                for j in range(len(self.layerarray[-1].neuronarray)):
+                    self.layerarray[-1].neuronarray[j].delta = delta[j]
+                self.backwardPropagation()
+                self.updateWeigths(input[i])
+            e.append(errorsq)
+        plt.plot(range(0,epochs), e)
         plt.show()
