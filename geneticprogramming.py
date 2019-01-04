@@ -8,6 +8,7 @@ function_set = {"+" : operator.add,
                 "*" : operator.mul,
                 "/" : operator.truediv}
 
+# Hiperparámetros
 MAX_DEPTH = 6
 NN_AST = (2**(MAX_DEPTH+1) - 1)
 POP_SIZE = 500
@@ -20,7 +21,7 @@ MIN_SOL = 0
 MAX_SOL = 1000
 MAX_GEN = 200
 TOL = 5
-TOL_EQ = 200
+TOL_EQ = 30
 MUT_RATE = 0.01
 CROSS_RATE = 0.9
 
@@ -208,22 +209,31 @@ def createPopulationNumbers(numbers_set, has_vars = False, vars = None):
     return population
 
 def fitnessNumbers(individual, solution):
+    initiate = False
     if individual.has_vars:
         result = math.inf
         for i in range(-10,10):
             try:
-                result += abs(solution.calculate[i] - individual.calculate([i]))
-            except:
+                aux = abs(solution.calculate([i]) - individual.calculate([i]))
+                if not(initiate):
+                    result = 0
+                    initiate = True
+                result += aux
+            except Exception as e:
+                #print(e)
                 continue
-        return result / 21
+        return result
     return abs(solution - individual.calculate())
 
 def tournamentSelectionNumbers(population, fitness):
     best = None
+    fit = 0
     for i in range(TOUR_SIZE):
         index = random.randint(0,POP_SIZE-1)
         if (best == None or fitness[index] < fitness[best]):
+            fit = fitness[index]
             best = index
+    #print("Fitness:",fit)
     return population[best]
 
 def reproductionNumbers(parentsub, parentcross):
@@ -283,9 +293,9 @@ def geneticProgrammingNumbers(population, solution):
         #variance.append(sum((fit - mean) ** 2 for fit in fitness) / len(fitness))
         parent1 = tournamentSelectionNumbers(population, fitness)
         parent2 = tournamentSelectionNumbers(population, fitness)
-        print("\nTournament parents:")
-        print(parent1)
-        print(parent2)
+        #print("\nTournament parents:")
+        #print(parent1)
+        #print(parent2)
         # Parent 1 se le extrae un sub-árbol
         if random.random() < 0.5:
             population = reproductionNumbers(parent1, parent2)
@@ -312,7 +322,6 @@ def main():
     #for p in population:
     #    print(p)
     x,y = geneticProgrammingNumbers(population, solution)
-    print("\n######################")
     if x == None:
         print("\nNo solution found")
     else:
@@ -324,20 +333,20 @@ def main():
     # Problem: Find equation that is more similar to function
     numbers_set = createNumberSet()
     vars = ["x"]
-    function = AST(numbers_set, True, vars).root = Function(Function("x","x","*"),Function(3,"x","-"),"-")
+    function = AST(numbers_set, True, vars)
+    function.root = Function(Function(Terminal("x"),Terminal("x"),"*"),Function(Terminal("x"),Terminal(2),"-"),"+")
     print("\nFind equation that is closer to function with variables")
-    print("\nNumbers Set:" , numbers_set)
+    print("\nNumbers Set:" , numbers_set, vars)
     print("Function:", function)
     population = createPopulationNumbers(numbers_set, True, vars)
-    for p in population:
-        print(p)
+    #for p in population:
+    #    print(p)
     x,y = geneticProgrammingNumbers(population, function)
-    print("\n######################")
     if x == None:
         print("\nNo solution found")
     else:
         print("\nSolution found:", x)
-        print("Tolerance:", TOL)
+        print("Tolerance:", TOL_EQ)
     print("N° generations:", y)
 
 if __name__ == "__main__":
