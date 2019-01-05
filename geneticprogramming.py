@@ -25,7 +25,7 @@ TOL = 5
 TOL_EQ = 30
 MUT_RATE = 0.01
 CROSS_RATE = 0.9
-NSET_RATE = 0.3
+VAR_RATE = 0.3
 
 # Variables
 fitmean = []            # Mean of values in fitness for plot
@@ -61,7 +61,7 @@ class AST:
             return self
         elif depth == MAX_DEPTH or not(is_fun):
             if self.has_vars:
-                if random.random() < NSET_RATE:
+                if random.random() < VAR_RATE:
                     return Terminal(random.choice(self.nset))
                 else:
                     return Terminal(random.choice(self.vars))
