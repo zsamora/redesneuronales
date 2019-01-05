@@ -2,6 +2,7 @@ import operator
 import random
 import copy
 import math
+import matplotlib.pyplot as plt
 
 function_set = {"+" : operator.add,
                 "-" : operator.sub,
@@ -12,7 +13,7 @@ function_set = {"+" : operator.add,
 MAX_DEPTH = 6
 NN_AST = (2**(MAX_DEPTH+1) - 1)
 POP_SIZE = 500
-TOUR_SIZE = int((POP_SIZE * 3) /  4)   # Size of tournament
+TOUR_SIZE = int((POP_SIZE * 3) /  4)
 N_GEN = 0
 N_NUMBERS = 10
 MIN_VALUE = 0
@@ -24,6 +25,11 @@ TOL = 5
 TOL_EQ = 30
 MUT_RATE = 0.01
 CROSS_RATE = 0.9
+NSET_RATE = 0.3
+
+# Variables
+fitmean = []            # Mean of values in fitness for plot
+variance = []           # Variance of values in fitness for plot
 
 class AST:
     def __init__(self, numbers_set, has_vars = False, vars = None):
@@ -55,7 +61,7 @@ class AST:
             return self
         elif depth == MAX_DEPTH or not(is_fun):
             if self.has_vars:
-                if random.random() < 0.5:
+                if random.random() < NSET_RATE:
                     return Terminal(random.choice(self.nset))
                 else:
                     return Terminal(random.choice(self.vars))
@@ -106,7 +112,7 @@ class AST:
 
     def mutate(self):
         if self.has_vars:
-            self.crossover(AST(numbers_set, True, vars).initialize(0,0).root)
+            self.crossover(AST(self.nset, True, self.vars).initialize(0,0).root)
         else:
             self.crossover(AST(self.nset).initialize(0,0).root)
 
@@ -172,7 +178,7 @@ class Terminal:
     def __init__(self, val):
         self.val = val
 
-    def calculate(self, dict):
+    def calculate(self, dict = None):
         if type(self.val) == str:
             return dict[self.val]
         return self.val
@@ -204,7 +210,9 @@ def createPopulationNumbers(numbers_set, has_vars = False, vars = None):
             if not(has_vars):
                 equation.calculate()
             population.append(equation)
-        except:
+        except Exception as e:
+            #print("ERROR 0")
+            #print(e)
             continue
     return population
 
@@ -220,10 +228,12 @@ def fitnessNumbers(individual, solution):
                     initiate = True
                 result += aux
             except Exception as e:
+                #print("ERROR 1")
                 #print(e)
                 continue
         return result
-    return abs(solution - individual.calculate())
+    else:
+        return abs(solution - individual.calculate())
 
 def tournamentSelectionNumbers(population, fitness):
     best = None
@@ -233,7 +243,7 @@ def tournamentSelectionNumbers(population, fitness):
         if (best == None or fitness[index] < fitness[best]):
             fit = fitness[index]
             best = index
-    #print("Fitness:",fit)
+    print("Fitness:",fit)
     return population[best]
 
 def reproductionNumbers(parentsub, parentcross):
@@ -248,7 +258,9 @@ def reproductionNumbers(parentsub, parentcross):
             try:
                 if not(parentsub.has_vars):
                     subtree.calculate()
-            except:
+            except Exception as e:
+                #print("ERROR 2")
+                #print(e)
                 subtree = False
                 continue
         child = False
@@ -267,7 +279,9 @@ def reproductionNumbers(parentsub, parentcross):
                     if not(paux.has_vars):
                         paux.calculate()
                 child = paux
-            except:
+            except Exception as e:
+                #print("ERROR 3")
+                #print(e)
                 continue
         new_population.append(child)
         #print("###############")
@@ -275,6 +289,8 @@ def reproductionNumbers(parentsub, parentcross):
 
 def geneticProgrammingNumbers(population, solution):
     global N_GEN
+    global fitmean
+    global variance
     while N_GEN < MAX_GEN:
         fitness = []
         for p in population:
@@ -288,14 +304,14 @@ def geneticProgrammingNumbers(population, solution):
             fitness.append(f)
         #print("\nFitness:", fitness)
         #print("\n#############################")
-        #mean = sum(fitness) / len(fitness)
-        #fitmean.append(mean)
-        #variance.append(sum((fit - mean) ** 2 for fit in fitness) / len(fitness))
+        mean = sum(fitness) / len(fitness)
+        fitmean.append(mean)
+        variance.append(sum((fit - mean) ** 2 for fit in fitness) / len(fitness))
         parent1 = tournamentSelectionNumbers(population, fitness)
         parent2 = tournamentSelectionNumbers(population, fitness)
-        #print("\nTournament parents:")
-        #print(parent1)
-        #print(parent2)
+        print("\nTournament parents:")
+        print(parent1)
+        print(parent2)
         # Parent 1 se le extrae un sub-árbol
         if random.random() < 0.5:
             population = reproductionNumbers(parent1, parent2)
@@ -306,48 +322,77 @@ def geneticProgrammingNumbers(population, solution):
         #for p in population:
         #    print(p)
         N_GEN = N_GEN + 1
-        #print("Generation: ", N_GEN)
+        print("Generation: ", N_GEN)
     return None, MAX_GEN
 
 def main():
     global N_GEN
-    N_GEN = 0
-    # Problem: Find equation between numbers to solve relation
-    numbers_set = createNumberSet()
-    solution = random.randint(MIN_SOL, MAX_SOL)
-    print("\nFind equation that is closer to number")
-    print("\nNumbers Set:" , numbers_set)
-    print("Solution:", solution)
-    population = createPopulationNumbers(numbers_set)
-    #for p in population:
-    #    print(p)
-    x,y = geneticProgrammingNumbers(population, solution)
-    if x == None:
-        print("\nNo solution found")
-    else:
-        print("\nSolution found:", x)
-        print("Result:", x.calculate())
-        print("Tolerance:", TOL)
-    print("N° generations:", y)
-    print("\n######################")
-    # Problem: Find equation that is more similar to function
-    numbers_set = createNumberSet()
-    vars = ["x"]
-    function = AST(numbers_set, True, vars)
-    function.root = Function(Function(Terminal("x"),Terminal("x"),"*"),Function(Terminal("x"),Terminal(2),"-"),"+")
-    print("\nFind equation that is closer to function with variables")
-    print("\nNumbers Set:" , numbers_set, vars)
-    print("Function:", function)
-    population = createPopulationNumbers(numbers_set, True, vars)
-    #for p in population:
-    #    print(p)
-    x,y = geneticProgrammingNumbers(population, function)
-    if x == None:
-        print("\nNo solution found")
-    else:
-        print("\nSolution found:", x)
-        print("Tolerance:", TOL_EQ)
-    print("N° generations:", y)
+    global fitmean
+    global variance
+    cont = 1
+    while cont > 0:
+        # Problem: Find equation between numbers to solve relation
+        numbers_set = createNumberSet()
+        solution = random.randint(MIN_SOL, MAX_SOL)
+        print("\nFind equation that is closer to number")
+        print("\nNumbers Set:" , numbers_set)
+        print("Solution:", solution)
+        population = createPopulationNumbers(numbers_set)
+        #for p in population:
+            #print(p)
+        N_GEN = 0
+        fitmean = []            # Mean of values in fitness for plot
+        variance = []           # Variance of values in fitness for plot
+        x,y = geneticProgrammingNumbers(population, solution)
+        if x == None:
+            print("\nNo solution found")
+        else:
+            print("\nSolution found:", x)
+            print("Result:", x.calculate())
+            print("Tolerance:", TOL)
+            fig = plt.figure()
+            plt.plot(range(y), fitmean)
+            plt.plot(range(y), variance)
+            fig.suptitle('Métricas de desempeño (Valor esperado f=0)', fontsize=15)
+            plt.legend(['Fitness promedio', 'Varianza'], loc='upper left')
+            plt.xlabel('Generaciones', fontsize=10)
+            plt.ylabel('Métricas', fontsize=10)
+            plt.show()
+        print("N° generations:", y)
+        print("\n######################")
+        cont -= 1
+    cont = 1
+    while cont > 0:
+        # Problem: Find equation that is more similar to function
+        numbers_set = createNumberSet()
+        vars = ["x"]
+        function = AST(numbers_set, True, vars)
+        function.root = Function(Function(Terminal("x"),Function(Terminal("x"),Terminal("x"),"*"),"*"),Function(Terminal("x"),Terminal(2),"-"),"+")
+        print("\nFind equation that is closer to function with variables")
+        print("\nNumbers Set:" , numbers_set, vars)
+        print("Function:", function)
+        population = createPopulationNumbers(numbers_set, True, vars)
+        #for p in population:
+        #    print(p)
+        N_GEN = 0
+        fitmean = []            # Mean of values in fitness for plot
+        variance = []           # Variance of values in fitness for plot
+        x,y = geneticProgrammingNumbers(population, function)
+        if x == None:
+            print("\nNo solution found")
+        else:
+            print("\nSolution found:", x)
+            print("Tolerance:", TOL_EQ)
+            fig = plt.figure()
+            plt.plot(range(y), fitmean)
+            plt.plot(range(y), variance)
+            fig.suptitle('Métricas de desempeño (Valor esperado f=0)', fontsize=15)
+            plt.legend(['Fitness promedio', 'Varianza'], loc='upper left')
+            plt.xlabel('Generaciones', fontsize=10)
+            plt.ylabel('Métricas', fontsize=10)
+            plt.show()
+        print("N° generations:", y)
+        cont -= 1
 
 if __name__ == "__main__":
     main()
